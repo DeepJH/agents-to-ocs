@@ -1,6 +1,7 @@
 """
 Anthropic Claude Code CLI 驱动
 """
+import os
 import shutil
 from typing import List, Tuple
 from .base import BaseAgentRunner
@@ -35,4 +36,9 @@ class ClaudeRunner(BaseAgentRunner):
         ]
         if target_model:
             cmd.extend(["--model", target_model])
+        # 授权 Claude Code 读取临时图片文件所在的外部目录 (如 /tmp)
+        if image_paths:
+            dirs = sorted(list({os.path.dirname(os.path.abspath(p)) for p in image_paths if p}))
+            for d in dirs:
+                cmd.extend(["--add-dir", d])
         return cmd

@@ -93,6 +93,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--clear-cache",
+        dest="clear_cache",
+        action="store_true",
+        help="一键清空本地 SQLite 题库缓存并退出"
+    )
+
+    parser.add_argument(
         "--list-agents",
         dest="list_agents",
         action="store_true",
@@ -117,6 +124,24 @@ if "pytest" in sys.modules:
 else:
     # 允许部分特定命令透传
     _args, _ = _parser.parse_known_args()
+
+# 导出运行时配置
+AGENT_NAME = _args.agent
+runner_instance = get_runner(AGENT_NAME)
+MODEL_NAME = _args.model or runner_instance.default_model
+HOST = _args.host
+PORT = _args.port
+MAX_CONCURRENCY = _args.concurrency
+TIMEOUT_SECONDS = _args.timeout
+ENABLE_CACHE = not _args.no_cache
+DB_PATH = Path(os.getenv("OCS_DB_PATH", str(BASE_DIR / "cache.db")))
+
+# 处理 --clear-cache
+if getattr(_args, "clear_cache", False):
+    from cache_store import cache
+    del_count = cache.clear()
+    print(f"\n[✔] 已成功清空本地 SQLite 题库缓存 (共清理 {del_count} 条记录)。\n")
+    sys.exit(0)
 
 # 处理 --list-agents
 if getattr(_args, "list_agents", False):
@@ -147,14 +172,3 @@ if getattr(_args, "list_models", False):
         print(f"    - {m}{is_default}")
     print("=" * 60 + "\n")
     sys.exit(0)
-
-# 导出运行时配置
-AGENT_NAME = _args.agent
-runner_instance = get_runner(AGENT_NAME)
-MODEL_NAME = _args.model or runner_instance.default_model
-HOST = _args.host
-PORT = _args.port
-MAX_CONCURRENCY = _args.concurrency
-TIMEOUT_SECONDS = _args.timeout
-ENABLE_CACHE = not _args.no_cache
-DB_PATH = Path(os.getenv("OCS_DB_PATH", str(BASE_DIR / "cache.db")))

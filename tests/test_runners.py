@@ -4,7 +4,9 @@
 import unittest
 from runners import get_runner, list_runners
 from prompt_builder import clean_html, build_prompt
-from ocs_matcher import parse_model_json, normalize_answer_for_ocs
+from ocs_matcher import parse_model_json, normalize_answer_for_ocs, clean_option_prefix
+import tempfile
+import os
 from cache_store import CacheStore
 
 class TestRunners(unittest.TestCase):
@@ -34,6 +36,11 @@ class TestRunners(unittest.TestCase):
         self.assertIn("--model", cmd)
         self.assertIn("haiku", cmd)
         self.assertIn("--dangerously-skip-permissions", cmd)
+
+        # 验证带图片时自动添加 --add-dir 授权临时目录
+        cmd_with_img = runner.build_command("test img", "sonnet", ["/tmp/test_dir/img1.png", "/tmp/test_dir/img2.png"])
+        self.assertIn("--add-dir", cmd_with_img)
+        self.assertIn("/tmp/test_dir", cmd_with_img)
 
     def test_codex_command_builder(self):
         runner = get_runner("codex")
@@ -83,6 +90,76 @@ class TestPromptAndMatcher(unittest.TestCase):
         options = "A. 正确\nB. 错误"
         ans = normalize_answer_for_ocs("judgement", "对", options)
         self.assertEqual(ans, "A. 正确")
+
+    def test_clean_option_prefix(self):
+        cases = [
+            ("A. 选项内容", "选项内容"),
+            ("A、 选项内容", "选项内容"),
+            ("(A) 选项内容", "选项内容"),
+            ("（A）选项内容", "选项内容"),
+            ("【B】 选项内容", "选项内容"),
+            ("[1] 选项内容", "选项内容"),
+            ("① 选项内容", "选项内容"),
+            ("一、 选项内容", "选项内容"),
+            ("9. 选项内容", "选项内容"),
+        ]
+        for raw, expected in cases:
+            self.assertEqual(clean_option_prefix(raw), expected)
+
+    def test_parse_model_json_non_greedy(self):
+        # 模拟模型输出内部思考过程大括号干扰的情况
+        mixed_text = (
+            "Thinking process: {\"step\": 1, \"info\": \"calculate\"}\n"
+            "Now answer in json:\n"
+            "{\"answer\": \"C. 答案\", \"reason\": \"推导完成\"}\n"
+            "Hope this helps!"
+        )
+        ans, reason = parse_model_json(mixed_text)
+        self.assertEqual(ans, "C. 答案")
+        self.assertEqual(reason, "推导完成")
+
+    def test_normalize_completion(self):
+        # 1. 换行带序号的多空
+        raw1 = "1. 北京\n2. 上海\n3. 广州"
+        self.assertEqual(normalize_answer_for_ocs("completion", raw1, ""), "北京#上海#广州")
+
+        # 2. 单行以分号或序号分隔的多空
+        raw2 = "(1) 北京；(2) 上海"
+        self.assertEqual(normalize_answer_for_ocs("completion", raw2, ""), "北京#上海")
+
+        # 3. 第X空格式
+        raw3 = "第1空：北京\n第2空：上海"
+        self.assertEqual(normalize_answer_for_ocs("completion", raw3, ""), "北京#上海")
+
+        # 4. 原生带 # 格式
+        raw4 = "北京 # 上海"
+        self.assertEqual(normalize_answer_for_ocs("completion", raw4, ""), "北京#上海")
+
+        # 5. 单空题去除前缀
+        raw5 = "1. 北京"
+        self.assertEqual(normalize_answer_for_ocs("completion", raw5, ""), "北京")
+
+class TestCacheStore(unittest.TestCase):
+    def test_cache_clear(self):
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+            temp_db = f.name
+
+        try:
+            store = CacheStore(db_path=temp_db)
+            self.assertEqual(store.count(), 0)
+
+            # 插入两条测试记录
+            store.set("q1", "single", "A", "理由1")
+            store.set("q2", "multiple", "A#B", "理由2")
+            self.assertEqual(store.count(), 2)
+
+            # 执行清空
+            deleted = store.clear()
+            self.assertEqual(deleted, 2)
+            self.assertEqual(store.count(), 0)
+        finally:
+            if os.path.exists(temp_db):
+                os.remove(temp_db)
 
 if __name__ == "__main__":
     unittest.main()

@@ -84,4 +84,18 @@ class CacheStore:
             except Exception:
                 return 0
 
+    def clear(self) -> int:
+        """清空本地 SQLite 题库缓存记录并返回删除的数量"""
+        with _lock:
+            try:
+                with sqlite3.connect(self.db_path) as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT COUNT(*) FROM ocs_cache")
+                    cnt = cursor.fetchone()[0]
+                    cursor.execute("DELETE FROM ocs_cache")
+                    conn.commit()
+                    return cnt
+            except Exception:
+                return 0
+
 cache = CacheStore()

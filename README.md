@@ -58,6 +58,7 @@ cd agents-to-ocs
   -c, --concurrency N   设置最大并发 Agent 进程数 (默认: 3)
   -t, --timeout SECONDS 单题最大推理超时秒数 (默认: 50)
   --no-cache            禁用本地 SQLite 题库缓存
+  --clear-cache         一键清空本地 SQLite 题库缓存并退出
   --list-agents         列出当前系统所有支持的 Agent 类型及本地就绪状态
   --list-models         列出当前所选 Agent 的推荐模型列表
 ```
@@ -85,6 +86,9 @@ cd agents-to-ocs
 
 # 6. 查看指定 Agent 的推荐可用模型
 ./start.sh -a agy --list-models
+
+# 7. 一键清空本地题库缓存
+./start.sh --clear-cache
 ```
 
 > **Windows 用户**：直接将上述命令中的 `./start.sh` 换成 `start.bat` 即可（如 `start.bat -a claude -m sonnet`，或直接双击 `start.bat` 默认启动）。
