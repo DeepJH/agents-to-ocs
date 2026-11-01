@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+cache.db
+cache.db-journal
+*.log
+.DS_Store
