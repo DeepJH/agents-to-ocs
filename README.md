@@ -9,7 +9,7 @@
 本项目专为 **[OCS 网课助手 (Online Course Script)](https://docs.ocsjs.com/)** 打造，纯按 OCS 官方 `AnswererWrapper` 题库标准自研。通过桥接本地 **Google Antigravity CLI (`agy`)**，将 `gemini-3.8-flash-high` 等高精度多模态大语言模型直接包装为 OCS 的本地私有智能题库。
 
 - **GitHub 仓库**：[https://github.com/DeepJH/agy-to-ocs](https://github.com/DeepJH/agy-to-ocs)
-- **开源许可证**：[Apache License 2.0](file:///home/deepjh/workspace/agy-to-ocs/LICENSE)
+- **开源许可证**：[Apache License 2.0](LICENSE)
 
 ---
 
@@ -47,7 +47,7 @@ chmod +x start.sh
 > **自动规避 PEP 668**：现代 Linux（Debian 12+ / Ubuntu 23+）默认开启 PEP 668 限制全局 pip。该脚本会自动创建 `.venv` 隔离环境并调用虚拟环境 pip，**全程无需 root / sudo 权限**。
 
 #### 🪟 Windows 环境（一键双击）
-直接双击运行 [start.bat](file:///home/deepjh/workspace/agy-to-ocs/start.bat) 即可。脚本会自动检查系统 Python、创建 `.venv` 并完成依赖安装与拉起。
+直接双击运行 [start.bat](start.bat) 即可。脚本会自动检查系统 Python、创建 `.venv` 并完成依赖安装与拉起。
 
 #### 🛠️ 手动安装运行（面向开发者）
 ```bash
@@ -157,7 +157,7 @@ python main.py
 
 ## 四、 高级配置与环境变量
 
-程序支持通过修改 [config.py](file:///home/deepjh/workspace/agy-to-ocs/config.py) 或通过系统环境变量进行无入侵定制：
+程序支持通过修改 [config.py](config.py) 或通过系统环境变量进行无入侵定制：
 
 | 环境变量名 | 默认值 | 说明 |
 | :--- | :--- | :--- |
@@ -201,4 +201,4 @@ OCS_MODEL=gemini-3.8-flash-low ./start.sh
 
 ## 六、 开源许可证
 
-本项目基于 [Apache License 2.0](file:///home/deepjh/workspace/agy-to-ocs/LICENSE) 协议开源。
+本项目基于 [Apache License 2.0](LICENSE) 协议开源。
