@@ -1,6 +1,7 @@
 """
-FastAPI 主服务模块：接收 OCS 请求、处理跨域、协调缓存与 agy 驱动、输出标准化题库应答
-全面兼容 OCS 网课助手的测速 (HEAD)、搜题 (GET/POST/Form/JSON) 及各种 handler 取值规范
+FastAPI 主服务模块：agent-to-ocs
+连接各类本地 AI Agent CLI (agy, claude, codex) 与 OCS 网课助手题库接口
+全面兼容 OCS 网课助手的测速 (HEAD)、搜题 (GET/POST/Form/JSON) 及各种 handler 规范
 """
 import json
 import urllib.parse
@@ -11,16 +12,24 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from config import HOST, PORT, DEFAULT_MODEL, MAX_CONCURRENCY
+from config import (
+    HOST,
+    PORT,
+    AGENT_NAME,
+    MODEL_NAME,
+    MAX_CONCURRENCY,
+    TIMEOUT_SECONDS,
+    runner_instance,
+)
 from cache_store import cache
-from agy_runner import query_agy
+from agent_runner import query_agent
 
 def get_ocs_wrapper_config(base_url: str = f"http://{HOST}:{PORT}") -> List[Dict[str, Any]]:
     """生成给 OCS 网课助手一键导入的题库配置 JSON"""
     return [
         {
-            "name": f"AGY 智能题库 ({DEFAULT_MODEL})",
-            "homepage": "https://antigravity.google",
+            "name": f"Agent 智能题库 ({AGENT_NAME.upper()} - {MODEL_NAME})",
+            "homepage": "https://github.com/DeepJH/agent-to-ocs",
             "url": f"{base_url}/ocs",
             "method": "post",
             "type": "fetch",
@@ -45,11 +54,12 @@ def get_ocs_wrapper_config(base_url: str = f"http://{HOST}:{PORT}") -> List[Dict
 async def lifespan(app: FastAPI):
     config_json = json.dumps(get_ocs_wrapper_config(), indent=2, ensure_ascii=False)
     print("\n" + "=" * 70)
-    print("  🚀 AGY to OCS 题库服务已成功启动！")
+    print("  🚀 agent-to-ocs 智能题库服务已成功启动！")
     print(f"  • 服务地址 : http://{HOST}:{PORT}")
     print(f"  • 题库端点 : http://{HOST}:{PORT}/ocs (兼容 /, /search, /query)")
-    print(f"  • 推理模型 : {DEFAULT_MODEL}")
-    print(f"  • 并发限制 : {MAX_CONCURRENCY} 个任务并发")
+    print(f"  • Agent驱动: {runner_instance.display_name} ({AGENT_NAME})")
+    print(f"  • 推理模型 : {MODEL_NAME}")
+    print(f"  • 并发限制 : {MAX_CONCURRENCY} 个进程并发")
     print("=" * 70)
     print("【OCS 网课助手一键配置代码】（直接复制下方整段 JSON 填入 OCS 题库配置中）：")
     print("-" * 70)
@@ -61,9 +71,9 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="AGY to OCS Bridge Service",
-    description="将 Antigravity CLI 转化为 OCS 网课助手智能题库的桥接程序",
-    version="1.1.0",
+    title="agent-to-ocs Bridge Service",
+    description="将本地各 AI Agent CLI (agy, claude code, codex) 转化为 OCS 网课助手智能题库的桥接程序",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -83,11 +93,13 @@ def build_ocs_response(code: int, title: str, answer: str, reason: str, cached: 
     """
     ans_str = str(answer or "").strip()
     answers_list = [a.strip() for a in ans_str.split("#") if a.strip()] if ans_str else []
-    
+
     payload = {
         "code": code,
         "status": 200 if code == 1 else 404,
         "success": code == 1,
+        "agent": AGENT_NAME,
+        "model": MODEL_NAME,
         "title": title,
         "question": title,
         "answer": ans_str,
@@ -101,6 +113,8 @@ def build_ocs_response(code: int, title: str, answer: str, reason: str, cached: 
             "answers": answers_list,
             "reason": reason,
             "cached": cached,
+            "agent": AGENT_NAME,
+            "model": MODEL_NAME,
         }
     }
     return payload
@@ -126,11 +140,9 @@ async def extract_request_params(request: Request) -> Dict[str, Any]:
             raw_body = await request.body()
             if raw_body:
                 raw_text = raw_body.decode("utf-8", errors="ignore").strip()
-                # 优先尝试 JSON
                 try:
                     body_obj = json.loads(raw_text)
                 except Exception:
-                    # 尝试 URL 编码表单
                     parsed = urllib.parse.parse_qs(raw_text)
                     if parsed:
                         body_obj = {k: v[0] if isinstance(v, list) and len(v) == 1 else v for k, v in parsed.items()}
@@ -140,7 +152,6 @@ async def extract_request_params(request: Request) -> Dict[str, Any]:
             body_obj = None
 
         if isinstance(body_obj, dict):
-            # 处理嵌套 data 结构（部分脚本将参数封在 data 内）
             src = body_obj.get("data") if isinstance(body_obj.get("data"), dict) else body_obj
             title = src.get("title") or src.get("question") or src.get("q") or title
             options = src.get("options") or src.get("option") or options
@@ -165,7 +176,7 @@ async def handle_search_or_ping(request: Request):
     """
     # 如果是 HEAD 请求（OCS 测速刷新专用）
     if request.method.upper() == "HEAD":
-        return Response(status_code=200, headers={"X-Service": "agy-to-ocs", "Access-Control-Allow-Origin": "*"})
+        return Response(status_code=200, headers={"X-Service": "agent-to-ocs", "Access-Control-Allow-Origin": "*"})
 
     params = await extract_request_params(request)
     title = params["title"]
@@ -173,14 +184,16 @@ async def handle_search_or_ping(request: Request):
     q_type = params["type"]
     images = params["images"]
 
-    # 如果既没有题干也没有图片（比如用户单纯浏览器 GET / 访问或 OCS 探活）
+    # 探活或普通网页访问
     if not title and not images:
         return JSONResponse(content={
             "status": "online",
-            "service": "agy-to-ocs",
-            "model": DEFAULT_MODEL,
+            "service": "agent-to-ocs",
+            "agent": AGENT_NAME,
+            "agent_display": runner_instance.display_name,
+            "model": MODEL_NAME,
             "cached_count": cache.count(),
-            "message": "AGY to OCS 服务正常运行中",
+            "message": "agent-to-ocs 服务正常运行中",
         })
 
     # 1. 查询本地 SQLite 缓存（毫秒级直出）
@@ -194,13 +207,16 @@ async def handle_search_or_ping(request: Request):
             cached=True,
         ))
 
-    # 2. 未命中缓存，调用 agy 推理
-    answer, reason = await query_agy(
+    # 2. 未命中缓存，调用当前配置的 Agent 推理
+    answer, reason = await query_agent(
         q_type=q_type,
         title=title,
         options=options,
         raw_images=images,
-        model=DEFAULT_MODEL,
+        agent_name=AGENT_NAME,
+        model=MODEL_NAME,
+        concurrency=MAX_CONCURRENCY,
+        timeout_seconds=TIMEOUT_SECONDS,
     )
 
     if answer:
@@ -210,7 +226,7 @@ async def handle_search_or_ping(request: Request):
             options=options,
             answer=answer,
             reason=reason,
-            model=DEFAULT_MODEL,
+            model=f"{AGENT_NAME}:{MODEL_NAME}",
         )
         return JSONResponse(content=build_ocs_response(
             code=1,

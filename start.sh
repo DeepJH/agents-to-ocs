@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo -e "${BLUE}======================================================================${NC}"
-echo -e "${BLUE}           AGY to OCS 题库服务 - 一键自检与启动 (Linux)              ${NC}"
+echo -e "${BLUE}          agent-to-ocs 题库服务 - 一键自检与启动 (Linux)              ${NC}"
 echo -e "${BLUE}======================================================================${NC}"
 
 # 1. 查找系统 Python 3
@@ -75,6 +75,6 @@ else
     echo -e "${GREEN}[✔] 所有依赖库均已完整就绪。${NC}"
 fi
 
-# 5. 启动服务
-echo -e "${GREEN}[*] 启动 AGY to OCS 桥接服务中...${NC}\n"
-exec "$VENV_DIR/bin/python" main.py
+# 5. 启动服务 (支持透传用户命令行参数，如 -h, -a, -m 等)
+echo -e "${GREEN}[*] 启动 agent-to-ocs 桥接服务中...${NC}\n"
+exec "$VENV_DIR/bin/python" main.py "$@"

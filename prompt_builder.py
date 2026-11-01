@@ -16,8 +16,8 @@ def clean_html(text: str) -> str:
     """清理题干和选项中的 HTML 标签与实体编码（如 <p>, &nbsp; 等）"""
     if not text:
         return ""
-    # 解码 HTML 实体 (&nbsp;, &lt;, &gt;, &quot; 等)
-    unescaped = html.unescape(text)
+    # 解码 HTML 实体并将不换行空格 \xa0 替换为标准空格
+    unescaped = html.unescape(text).replace("\xa0", " ").replace("\u3000", " ")
     # 去除 HTML 标签
     cleaned = re.sub(r"<[^>]+>", " ", unescaped)
     # 合并连续多余空格

@@ -69,12 +69,23 @@ def normalize_answer_for_ocs(q_type: str, answer: str, options_str: str) -> str:
 
     # 判断题规范化
     if q_type == "judgement":
-        ans_clean = answer.strip().replace("√", "正确").replace("×", "错误").replace("✓", "正确")
+        ans_raw = answer.strip()
+        is_true = any(k in ans_raw for k in ("对", "正确", "T", "True", "true", "√", "✓", "是"))
+        is_false = any(k in ans_raw for k in ("错", "错误", "F", "False", "false", "×", "否", "不"))
+
         if raw_options:
+            if is_true and not is_false:
+                for opt in raw_options:
+                    if any(k in opt for k in ("对", "正确", "T", "True", "true", "√", "✓", "是")):
+                        return opt
+            elif is_false and not is_true:
+                for opt in raw_options:
+                    if any(k in opt for k in ("错", "错误", "F", "False", "false", "×", "否", "不")):
+                        return opt
             for opt in raw_options:
-                if ans_clean in opt or opt in ans_clean:
+                if ans_raw in opt or opt in ans_raw:
                     return opt
-        return ans_clean
+        return ans_raw
 
     # 单选题规范化
     if q_type == "single" and raw_options:

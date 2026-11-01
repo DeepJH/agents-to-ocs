@@ -1,31 +1,32 @@
-# AGY to OCS：基于 Antigravity CLI 的智能网课题库桥接服务
+# agent-to-ocs：本地 AI Agent 网课题库通用桥接服务
 
-[![GitHub](https://img.shields.io/badge/GitHub-DeepJH%2Fagy--to--ocs-blue?logo=github)](https://github.com/DeepJH/agy-to-ocs)
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![GitHub](https://img.shields.io/badge/GitHub-DeepJH%2Fagent--to--ocs-blue?logo=github)](https://github.com/DeepJH/agent-to-ocs)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
 [![OCS](https://img.shields.io/badge/OCS-Compatible-success.svg)](https://docs.ocsjs.com/)
 
-本项目专为 **[OCS 网课助手 (Online Course Script)](https://docs.ocsjs.com/)** 打造，纯按 OCS 官方 `AnswererWrapper` 题库标准自研。通过桥接本地 **Google Antigravity CLI (`agy`)**，将 `gemini-3.8-flash-high` 等高精度多模态大语言模型直接包装为 OCS 的本地私有智能题库。
+本项目专为 **[OCS 网课助手 (Online Course Script)](https://docs.ocsjs.com/)** 打造，纯按 OCS 官方 `AnswererWrapper` 题库标准自研。全面支持将本地各种主流 **AI Agent CLI**（包括 **Google Antigravity `agy`**、**Anthropic `claude code`**、**OpenAI `codex`** 等）转化为 OCS 的私有智能题库。
 
-- **GitHub 仓库**：[https://github.com/DeepJH/agy-to-ocs](https://github.com/DeepJH/agy-to-ocs)
+- **GitHub 仓库**：[https://github.com/DeepJH/agent-to-ocs](https://github.com/DeepJH/agent-to-ocs)
 - **开源许可证**：[Apache License 2.0](LICENSE)
 
 ---
 
 ## 一、 核心特性概览
 
-- 🎯 **纯标准自研**：严格遵循 OCS `AnswererWrapper` 通信与选项匹配规范，无需注册或依赖第三方付费题库接口。
+- 🤖 **全 Agent 生态支持**：统一抽象底层 CLI 驱动，内置支持 **Google Antigravity (`agy`)**、**Anthropic Claude Code (`claude`)** 与 **OpenAI Codex (`codex`)**，一行命令即可随时自由切换。
+- 🎯 **纯标准自研**：严格遵循 OCS `AnswererWrapper` 题库规范，无需对接任何第三方付费题库接口。
 - ⚡ **无缝支持测速与探活**：原生支持 HTTP `HEAD` 请求（如 `HEAD /?t=...`），连通性秒级返回 200 OK，界面精准显示毫秒延迟。
-- 🖼️ **原生多模态视觉答题**：支持接收 OCS 传回的 Base64 图片，由 `gemini-3.8-flash-high` 结合视觉上下文解析公式题、图表题与纯图片选项题。
+- 🖼️ **原生多模态视觉答题**：支持接收 OCS 传回的 Base64 图片，结合视觉上下文解析公式题、图表题与纯图片选项题。
 - 🛡️ **严格答案规范化**：
   - **单选题**：逐字对齐选项原文，防止模型自行附加多余序号。
   - **多选题**：严格遵循 OCS 规范，自动用半角井号 `#` 连接多个正确选项（如 `A. 正确项1#B. 正确项2`）。
-  - **判断题**：自动对齐“对/错/正确/错误/T/F”。
+  - **判断题**：建立真假同义词映射，自动对齐“对/错/正确/错误/T/F”。
   - **填空题**：多个空自动以 `#` 拼接。
 - ⚡ **本地 SQLite 题库缓存**：题目解答后自动持久化到本地 `cache.db`，同一题目二次出现时**毫秒级直出**，极大节约模型额度与等待时间。
 - 🚥 **并发限流与防打爆保护**：内置异步信号量队列（默认最大并发为 3），当网课平台整卷一次性并发抛出几十道题时，自动排队保护系统与 API。
-- 🚀 **跨平台一键自检与启动**：自动检测环境、创建虚拟环境、安装依赖并一键启动。
+- 🚀 **跨平台一键自检与参数透传**：支持 `-h/--help` 完整帮助、`-a` 切换 Agent、`-m` 选模型、`-p` 改端口等。
 
 ---
 
@@ -33,37 +34,62 @@
 
 ### 1. 克隆仓库
 ```bash
-git clone https://github.com/DeepJH/agy-to-ocs.git
-cd agy-to-ocs
+git clone https://github.com/DeepJH/agent-to-ocs.git
+cd agent-to-ocs
 ```
 
-### 2. 一键启动服务
+### 2. 命令行参数全览 (`-h`)
+本程序的所有脚本与主程序均完整支持 CLI 参数：
 
-#### 🐧 Linux / macOS 环境（一键脚本）
-```bash
-chmod +x start.sh
-./start.sh
+```text
+用法: main.py [-h] [-a {agy,claude,codex}] [-m MODEL] [-p PORT] [-H HOST]
+               [-c CONCURRENCY] [-t TIMEOUT] [--no-cache] [--list-agents]
+               [--list-models]
+
+参数选项:
+  -h, --help            显示命令行帮助信息并退出
+  -a, --agent {agy,claude,codex}
+                        指定后端 Agent CLI (默认: agy)
+  -m, --model MODEL     指定推理模型名称 (留空则使用所选 Agent 的推荐默认模型)
+  -p, --port PORT       指定 HTTP 服务端口 (默认: 8788)
+  -H, --host HOST       指定监听地址 (默认: 127.0.0.1)
+  -c, --concurrency N   设置最大并发 Agent 进程数 (默认: 3)
+  -t, --timeout SECONDS 单题最大推理超时秒数 (默认: 50)
+  --no-cache            禁用本地 SQLite 题库缓存
+  --list-agents         列出当前系统所有支持的 Agent 类型及本地就绪状态
+  --list-models         列出当前所选 Agent 的推荐模型列表
 ```
-> **自动规避 PEP 668**：现代 Linux（Debian 12+ / Ubuntu 23+）默认开启 PEP 668 限制全局 pip。该脚本会自动创建 `.venv` 隔离环境并调用虚拟环境 pip，**全程无需 root / sudo 权限**。
-
-#### 🪟 Windows 环境（一键双击）
-直接双击运行 [start.bat](start.bat) 即可。脚本会自动检查系统 Python、创建 `.venv` 并完成依赖安装与拉起。
-
-#### 🛠️ 手动安装运行（面向开发者）
-```bash
-python3 -m venv .venv
-source .venv/bin/activate       # Linux / macOS
-# .venv\Scripts\activate        # Windows PowerShell / CMD
-
-pip install -r requirements.txt
-python main.py
-```
-
-服务启动成功后，将监听在 `http://127.0.0.1:8788`。
 
 ---
 
-### 3. 配置 OCS 网课助手（三步完成对接）
+### 3. 一键启动服务示例
+
+#### 常用启动命令：
+```bash
+# 1. 默认使用 Antigravity (gemini-3.8-flash-high) 极速启动
+./start.sh
+
+# 2. 切换为 Claude Code 并指定 sonnet 模型
+./start.sh -a claude -m sonnet
+
+# 3. 切换为 OpenAI Codex 并指定 o3 模型
+./start.sh -a codex -m o3
+
+# 4. 自定义服务端口为 9000，设置并发限制为 5
+./start.sh -p 9000 -c 5
+
+# 5. 查看系统内已安装的 Agent 状态
+./start.sh --list-agents
+
+# 6. 查看指定 Agent 的推荐可用模型
+./start.sh -a agy --list-models
+```
+
+> **Windows 用户**：直接将上述命令中的 `./start.sh` 换成 `start.bat` 即可（如 `start.bat -a claude -m sonnet`，或直接双击 `start.bat` 默认启动）。
+
+---
+
+### 4. 配置 OCS 网课助手（三步完成对接）
 
 #### 第一步：打开 OCS 题库配置面板
 1. 在浏览器（已安装 Tampermonkey 或 ScriptCat 并启用 OCS 网课助手）中打开任意网课页面（如超星学习通、智慧树等）。
@@ -76,8 +102,8 @@ python main.py
 ```json
 [
   {
-    "name": "AGY 智能题库 (gemini-3.8-flash-high)",
-    "homepage": "https://antigravity.google",
+    "name": "Agent 智能题库",
+    "homepage": "https://github.com/DeepJH/agent-to-ocs",
     "url": "http://127.0.0.1:8788/ocs",
     "method": "post",
     "type": "fetch",
@@ -106,7 +132,7 @@ python main.py
 
 ---
 
-## 三、 工作原理与架构图
+## 三、 工作原理与多 Agent 架构
 
 ```
 ┌─────────────────────────────────┐
@@ -116,7 +142,7 @@ python main.py
                  │ ① POST /ocs (携带 title, options, type, images)
                  ▼
 ┌────────────────────────────────────────────────────────┐
-│              AGY to OCS 本地桥接服务 (FastAPI)           │
+│             agent-to-ocs 本地桥接服务 (FastAPI)         │
 │                   http://127.0.0.1:8788                │
 │                                                        │
 │  ┌────────────────────────┐   命中   ┌───────────────┐ │
@@ -134,13 +160,17 @@ python main.py
 │  │   提示词构建与多模态解析 │ (Base64 解码为临时图片)    │
 │  └─────────────┬──────────┘                           │
 └────────────────┼───────────────────────────────────────┘
-                 │ ② 执行 agy -p --model gemini-3.8-flash-high
+                 │ ② 动态调用配置的 Agent 驱动
                  ▼
-┌─────────────────────────────────┐
-│     Google Antigravity CLI      │
-│             (agy)               │
-└────────────────┬────────────────┘
-                 │ ③ 模型推理返回结构化 JSON
+┌────────────────────────────────────────────────────────┐
+│                 Agent 统一抽象驱动层                   │
+│                                                        │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌─────────┐ │
+│  │ Google AGY CLI   │ │ Claude Code CLI  │ │ Codex   │ │
+│  │ (agy -p ...)     │ │ (claude -p ...)  │ │ (exec)  │ │
+│  └──────────────────┘ └──────────────────┘ └─────────┘ │
+└────────────────┬───────────────────────────────────────┘
+                 │ ③ 返回结构化答案 JSON
                  ▼
 ┌────────────────────────────────────────────────────────┐
 │            OCS 选项匹配引擎 (ocs_matcher.py)           │
@@ -155,50 +185,25 @@ python main.py
 
 ---
 
-## 四、 高级配置与环境变量
-
-程序支持通过修改 [config.py](config.py) 或通过系统环境变量进行无入侵定制：
-
-| 环境变量名 | 默认值 | 说明 |
-| :--- | :--- | :--- |
-| `OCS_HOST` | `127.0.0.1` | 服务监听的 IP 地址 |
-| `OCS_PORT` | `8788` | 服务监听端口 |
-| `OCS_MODEL` | `gemini-3.8-flash-high` | 推理使用的模型（可选 `gemini-3.8-flash-low`、`claude-sonnet-4-6` 等） |
-| `OCS_EFFORT` | `""` (留空) | 推理深度（若模型名已自带 high/medium 则留空） |
-| `OCS_MAX_CONCURRENCY` | `3` | 最大并发调起 `agy` 进程数，防止本地负载过高或 API 限流 |
-| `OCS_TIMEOUT` | `50` | 单题最大推理等待秒数（OCS 硬超时为 60s） |
-| `OCS_ENABLE_CACHE` | `true` | 是否启用 SQLite 题库缓存持久化 |
-| `OCS_DB_PATH` | `cache.db` | 本地 SQLite 缓存数据库文件存放路径 |
-
-#### 快速切换低延迟模型示例：
-```bash
-# 使用极速模型启动服务
-OCS_MODEL=gemini-3.8-flash-low ./start.sh
-```
-
----
-
-## 五、 常见问题排错 (FAQ)
+## 四、 常见问题排错 (FAQ)
 
 ### Q1: OCS 测速刷新显示 405 Method Not Allowed？
-- **解答**：最新版本已为根路径 `/`、`/health`、`/ocs` 等完整注册了 `HEAD` 方法，请确保拉取最新代码运行，即可秒回 200 OK 并显示毫秒延迟。
+- **解答**：最新版本已为根路径 `/`、`/health`、`/ocs` 等完整注册了 `HEAD` 方法，秒回 200 OK 并显示毫秒延迟。
 
 ### Q2: Linux 提示 `error: externally-managed-environment`？
 - **解答**：这是现代 Linux（Debian 12 / Ubuntu 23+）的 PEP 668 保护机制。**请直接运行 `./start.sh`**，脚本会自动创建与激活 `.venv` 虚拟环境，完全避免此报错。
 
-### Q3: 提示 `agy 退出异常` 或 `未找到 agy 命令`？
-- **解答**：
-  1. 请检查终端执行 `which agy`（Linux）或 `where agy`（Windows）是否能找到该可执行程序。
-  2. 若未登录，请先在终端直接输入 `agy` 并完成初次身份验证授权。
+### Q3: 如何查看我机器上安装了哪些 Agent？
+- **解答**：执行 `./start.sh --list-agents`，脚本会自动检测系统 PATH 中的 `agy`、`claude`、`codex` 并展示详细状态。
 
-### Q4: 为什么部分题目首次作答较慢？
-- **解答**：
-  1. 默认采用的 `gemini-3.8-flash-high` 拥有极高的推理深度与准确率，推理耗时通常在 10~25 秒左右。
-  2. **答过一次的题目会自动存入 SQLite 题库**，下次在同门课程做作业或期末考试遇到完全相同的题目时，服务将在 **10 毫秒内秒级返回**。
-  3. 若追求极速搜题，可设置环境变量 `OCS_MODEL=gemini-3.8-flash-low` 启动，耗时可缩短至数秒。
+### Q4: 提示某个 Agent 退出异常？
+- **解答**：请确保该 Agent 已在本地终端中完成过登录授权：
+  - `agy`：直接在终端运行 `agy` 登录
+  - `claude`：在终端运行 `claude login` 登录
+  - `codex`：在终端运行 `codex login` 登录
 
 ---
 
-## 六、 开源许可证
+## 五、 开源许可证
 
 本项目基于 [Apache License 2.0](LICENSE) 协议开源。
