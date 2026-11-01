@@ -28,8 +28,8 @@ def get_ocs_wrapper_config(base_url: str = f"http://{HOST}:{PORT}") -> List[Dict
     """生成给 OCS 网课助手一键导入的题库配置 JSON"""
     return [
         {
-            "name": f"Agent 智能题库 ({AGENT_NAME.upper()} - {MODEL_NAME})",
-            "homepage": "https://github.com/DeepJH/agent-to-ocs",
+            "name": f"Agents 智能题库 ({AGENT_NAME.upper()} - {MODEL_NAME})",
+            "homepage": "https://github.com/DeepJH/agents-to-ocs",
             "url": f"{base_url}/ocs",
             "method": "post",
             "type": "fetch",
@@ -54,7 +54,7 @@ def get_ocs_wrapper_config(base_url: str = f"http://{HOST}:{PORT}") -> List[Dict
 async def lifespan(app: FastAPI):
     config_json = json.dumps(get_ocs_wrapper_config(), indent=2, ensure_ascii=False)
     print("\n" + "=" * 70)
-    print("  🚀 agent-to-ocs 智能题库服务已成功启动！")
+    print("  🚀 agents-to-ocs 智能题库服务已成功启动！")
     print(f"  • 服务地址 : http://{HOST}:{PORT}")
     print(f"  • 题库端点 : http://{HOST}:{PORT}/ocs (兼容 /, /search, /query)")
     print(f"  • Agent驱动: {runner_instance.display_name} ({AGENT_NAME})")
@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(
-    title="agent-to-ocs Bridge Service",
+    title="agents-to-ocs Bridge Service",
     description="将本地各 AI Agent CLI (agy, claude code, codex) 转化为 OCS 网课助手智能题库的桥接程序",
     version="2.0.0",
     lifespan=lifespan,
@@ -176,7 +176,7 @@ async def handle_search_or_ping(request: Request):
     """
     # 如果是 HEAD 请求（OCS 测速刷新专用）
     if request.method.upper() == "HEAD":
-        return Response(status_code=200, headers={"X-Service": "agent-to-ocs", "Access-Control-Allow-Origin": "*"})
+        return Response(status_code=200, headers={"X-Service": "agents-to-ocs", "Access-Control-Allow-Origin": "*"})
 
     params = await extract_request_params(request)
     title = params["title"]
@@ -188,12 +188,12 @@ async def handle_search_or_ping(request: Request):
     if not title and not images:
         return JSONResponse(content={
             "status": "online",
-            "service": "agent-to-ocs",
+            "service": "agents-to-ocs",
             "agent": AGENT_NAME,
             "agent_display": runner_instance.display_name,
             "model": MODEL_NAME,
             "cached_count": cache.count(),
-            "message": "agent-to-ocs 服务正常运行中",
+            "message": "agents-to-ocs 服务正常运行中",
         })
 
     # 1. 查询本地 SQLite 缓存（毫秒级直出）

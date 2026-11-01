@@ -13,8 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent
 def build_parser() -> argparse.ArgumentParser:
     supported_keys = get_supported_agent_keys()
     parser = argparse.ArgumentParser(
-        prog="agent-to-ocs",
-        description="🚀 agent-to-ocs: 将各种本地 AI Agent CLI (agy, claude code, codex) 转化为 OCS 网课助手兼容的智能题库服务",
+        prog="agents-to-ocs",
+        description="🚀 agents-to-ocs: 将各种本地 AI Agent CLI (agy, claude code, codex) 转化为 OCS 网课助手兼容的智能题库服务",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 使用示例:
@@ -121,7 +121,7 @@ else:
 # 处理 --list-agents
 if getattr(_args, "list_agents", False):
     print("\n" + "=" * 65)
-    print("  🤖 agent-to-ocs: 支持的 Agent CLI 列表与本地环境检测")
+    print("  🤖 agents-to-ocs: 支持的 Agent CLI 列表与本地环境检测")
     print("=" * 65)
     for item in list_runners():
         status_icon = "✔ 已就绪" if item["available"] else "✖ 未就绪"

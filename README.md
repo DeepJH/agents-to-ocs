@@ -1,6 +1,6 @@
-# agent-to-ocs：本地 AI Agent 网课题库通用桥接服务
+# agents-to-ocs：本地 AI Agent 网课题库通用桥接服务
 
-[![GitHub](https://img.shields.io/badge/GitHub-DeepJH%2Fagent--to--ocs-blue?logo=github)](https://github.com/DeepJH/agent-to-ocs)
+[![GitHub](https://img.shields.io/badge/GitHub-DeepJH%2Fagents--to--ocs-blue?logo=github)](https://github.com/DeepJH/agents-to-ocs)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.8%2B-brightgreen.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
@@ -8,7 +8,7 @@
 
 本项目专为 **[OCS 网课助手 (Online Course Script)](https://docs.ocsjs.com/)** 打造，纯按 OCS 官方 `AnswererWrapper` 题库标准自研。全面支持将本地各种主流 **AI Agent CLI**（包括 **Google Antigravity `agy`**、**Anthropic `claude code`**、**OpenAI `codex`** 等）转化为 OCS 的私有智能题库。
 
-- **GitHub 仓库**：[https://github.com/DeepJH/agent-to-ocs](https://github.com/DeepJH/agent-to-ocs)
+- **GitHub 仓库**：[https://github.com/DeepJH/agents-to-ocs](https://github.com/DeepJH/agents-to-ocs)
 - **开源许可证**：[Apache License 2.0](LICENSE)
 
 ---
@@ -34,8 +34,8 @@
 
 ### 1. 克隆仓库
 ```bash
-git clone https://github.com/DeepJH/agent-to-ocs.git
-cd agent-to-ocs
+git clone https://github.com/DeepJH/agents-to-ocs.git
+cd agents-to-ocs
 ```
 
 ### 2. 命令行参数全览 (`-h`)
@@ -102,8 +102,8 @@ cd agent-to-ocs
 ```json
 [
   {
-    "name": "Agent 智能题库",
-    "homepage": "https://github.com/DeepJH/agent-to-ocs",
+    "name": "Agents 智能题库",
+    "homepage": "https://github.com/DeepJH/agents-to-ocs",
     "url": "http://127.0.0.1:8788/ocs",
     "method": "post",
     "type": "fetch",
@@ -142,7 +142,7 @@ cd agent-to-ocs
                  │ ① POST /ocs (携带 title, options, type, images)
                  ▼
 ┌────────────────────────────────────────────────────────┐
-│             agent-to-ocs 本地桥接服务 (FastAPI)         │
+│            agents-to-ocs 本地桥接服务 (FastAPI)         │
 │                   http://127.0.0.1:8788                │
 │                                                        │
 │  ┌────────────────────────┐   命中   ┌───────────────┐ │

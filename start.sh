@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 echo -e "${BLUE}======================================================================${NC}"
-echo -e "${BLUE}          agent-to-ocs 题库服务 - 一键自检与启动 (Linux)              ${NC}"
+echo -e "${BLUE}         agents-to-ocs 题库服务 - 一键自检与启动 (Linux)              ${NC}"
 echo -e "${BLUE}======================================================================${NC}"
 
 # 1. 查找系统 Python 3
@@ -76,5 +76,5 @@ else
 fi
 
 # 5. 启动服务 (支持透传用户命令行参数，如 -h, -a, -m 等)
-echo -e "${GREEN}[*] 启动 agent-to-ocs 桥接服务中...${NC}\n"
+echo -e "${GREEN}[*] 启动 agents-to-ocs 桥接服务中...${NC}\n"
 exec "$VENV_DIR/bin/python" main.py "$@"
